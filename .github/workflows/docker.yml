@@ -1,21 +1,11 @@
 name: build-and-push
 
-# 作用：只把 Aoluis1005/qq-farm-bot 构建成 Docker 镜像并推到 GHCR。
-# 运行交给 ClawCloud Run，这样用 GitHub Actions 是合规的。
+# 只负责构建镜像并推到 GHCR；运行交给 Northflank。
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'core/**'
-      - 'web/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - '.github/workflows/docker.yml'
   workflow_dispatch:
-
-env:
-  IMAGE: ghcr.io/${{ github.repository_owner }}/qq-farm-bot
 
 jobs:
   docker:
@@ -27,8 +17,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Set lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/qq-farm-bot" >> "$GITHUB_ENV"
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
@@ -45,12 +35,10 @@ jobs:
         with:
           context: .
           file: core/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
-          build-args: |
-            GITHUB_TOKEN=${{ secrets.GH_READ_TOKEN || secrets.GITHUB_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
